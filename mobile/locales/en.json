@@ -1,0 +1,79 @@
+{
+  "app": {
+    "name": "KarachiPulse",
+    "tagline": "Report. Verify. Resolve."
+  },
+  "tabs": {
+    "feed": "Feed",
+    "report": "Report",
+    "map": "Map",
+    "sos": "SOS"
+  },
+  "report": {
+    "title": "Report an Issue",
+    "category": "Category",
+    "subType": "Type",
+    "description": "Describe the problem",
+    "descriptionPlaceholder": "Describe the issue...",
+    "submit": "Submit Report",
+    "anonymous": "Report anonymously",
+    "photo": "Add Photo",
+    "photoAdded": "Photo added ✓",
+    "success": "Report submitted successfully",
+    "queued": "Saved offline. Will submit when connected.",
+    "locating": "Getting your location...",
+    "locationDenied": "Location permission is required to submit a report."
+  },
+  "categories": {
+    "infrastructure": "Infrastructure",
+    "safety": "Public Safety",
+    "utility": "Utilities"
+  },
+  "subTypes": {
+    "pothole": "Pothole",
+    "garbage": "Garbage",
+    "streetlight": "Streetlight",
+    "sewerage": "Sewerage",
+    "unsafe_zone": "Unsafe Zone",
+    "harassment": "Harassment",
+    "disaster": "Disaster",
+    "water": "Water",
+    "load_shedding": "Load Shedding"
+  },
+  "status": {
+    "pending": "Pending",
+    "verified": "Verified",
+    "assigned": "Assigned",
+    "in_progress": "In Progress",
+    "resolved": "Resolved",
+    "rejected": "Rejected",
+    "duplicate": "Duplicate"
+  },
+  "feed": {
+    "title": "Community Reports",
+    "empty": "No reports yet. Be the first to report an issue.",
+    "verifications": "verifications"
+  },
+  "verify": {
+    "verify": "Verify",
+    "confirmed": "Confirmed"
+  },
+  "sos": {
+    "title": "Emergency SOS",
+    "subtitle": "Use only in genuine emergencies. This immediately alerts city authorities with your GPS location.",
+    "button": "Send SOS Alert",
+    "confirm": "This will alert authorities immediately with your location. Continue?",
+    "sent": "SOS sent. Help is on the way.",
+    "sentNote": "Authorities have been notified with your location. Stay safe.",
+    "cancel": "Cancel",
+    "send": "Send SOS"
+  },
+  "map": {
+    "title": "Issue Map",
+    "filter": "Filter by type"
+  },
+  "common": {
+    "error": "Error",
+    "all": "All"
+  }
+}

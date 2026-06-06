@@ -1,0 +1,280 @@
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { supabase, STATUS_ORDER, CATEGORY_COLORS, STATUS_COLORS } from "../lib/supabase";
+import type { Report } from "../lib/supabase";
+import { SeverityChip, SeverityLegend } from "../components/SeverityIndicator";
+import PageHeader from "../components/PageHeader";
+import ReportDetailDrawer from "../components/ReportDetailDrawer";
+import Select from "../components/Select";
+import MultiSelect from "../components/MultiSelect";
+import { SearchIcon, ShieldIcon, DropletIcon, WrenchIcon, XIcon, UpvoteIcon, ClockIcon, ChevronDownIcon } from "../components/icons";
+
+export default function IssueQueue() {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([]);
+  const [severities, setSeverities] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Report | null>(null);
+  const [params] = useSearchParams();
+
+  // Keep the in-page search in sync with the sidebar's global search (?q=).
+  const urlQuery = params.get("q") ?? "";
+  useEffect(() => { setSearchInput(urlQuery); }, [urlQuery]);
+
+  // Debounce the search box so we hit the DB at most ~3×/sec while typing.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const fetchReports = useCallback(async () => {
+    let query = supabase
+      .from("reports")
+      .select("*")
+      .neq("status", "duplicate");
+
+    if (statuses.length) query = query.in("status", statuses);
+
+    // Each selected severity bucket becomes one OR'd range condition, so
+    // non-adjacent picks (e.g. Critical + Low) still work.
+    if (severities.length) {
+      query = query.or(severities.map((s) => SEVERITY_FILTERS[s]).join(","));
+    }
+
+    if (search) {
+      // strip PostgREST `or()` delimiters so user input can't break the filter
+      const q = search.replace(/[%,()]/g, " ");
+      query = query.or(
+        `sub_type.ilike.%${q}%,description.ilike.%${q}%,department.ilike.%${q}%,category.ilike.%${q}%`,
+      );
+    }
+
+    // Cap the page so the queue stays fast even with millions of rows.
+    query = query
+      .order("is_sos", { ascending: false })
+      .order("severity_score", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    const { data } = await query;
+    setReports((data as Report[]) ?? []);
+    setLoading(false);
+  }, [statuses, severities, search]);
+
+  useEffect(() => {
+    fetchReports();
+    const channel = supabase
+      .channel("queue-reports")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, fetchReports)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchReports]);
+
+  const updateStatus = async (id: string, status: string) => {
+    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    setSelected((s) => (s && s.id === id ? { ...s, status } : s));
+    await supabase.from("reports").update({ status }).eq("id", id);
+  };
+
+  const counts = {
+    total: reports.length,
+    sos: reports.filter((r) => r.is_sos).length,
+    critical: reports.filter((r) => (r.severity_score ?? 0) >= 8).length,
+    pending: reports.filter((r) => r.status === "pending").length,
+  };
+
+  return (
+    <div style={{ padding: 28, maxWidth: 1240, margin: "0 auto" }}>
+      <PageHeader
+        title="Issue Queue"
+        subtitle="Sorted by SOS → severity → recency · live via Realtime"
+        right={<SeverityLegend />}
+      />
+
+      {/* stat strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 22 }}>
+        <Stat label="Open issues" value={counts.total} />
+        <Stat label="Active SOS" value={counts.sos} accent="var(--danger)" />
+        <Stat label="Critical (8–10)" value={counts.critical} accent="var(--warn)" />
+        <Stat label="Awaiting triage" value={counts.pending} accent="var(--primary)" />
+      </div>
+
+      <div style={{ display: "flex", gap: 12, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <MultiSelect
+          ariaLabel="Filter by status"
+          placeholder="All statuses"
+          noun="status"
+          nounPlural="statuses"
+          values={statuses}
+          onChange={setStatuses}
+          options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
+        />
+
+        <MultiSelect
+          ariaLabel="Filter by severity"
+          placeholder="All severities"
+          noun="severity"
+          nounPlural="severities"
+          minWidth={188}
+          values={severities}
+          onChange={setSeverities}
+          options={SEVERITY_OPTIONS}
+        />
+
+        <div style={{ position: "relative", marginLeft: "auto", flex: "1 1 280px", maxWidth: 380 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", display: "flex", pointerEvents: "none" }}><SearchIcon size={16} /></span>
+          <input
+            className="input"
+            placeholder="Search type, description, department…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{ width: "100%", paddingLeft: 34, paddingRight: searchInput ? 32 : 12 }}
+          />
+          {searchInput && (
+            <button onClick={() => setSearchInput("")} aria-label="Clear search" style={clearBtn}><XIcon size={15} /></button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
+        {loading ? "Searching…" : `${reports.length}${reports.length === 100 ? "+" : ""} result${reports.length === 1 ? "" : "s"}`}
+        {(statuses.length > 0 || severities.length > 0 || search) && (
+          <button onClick={() => { setStatuses([]); setSeverities([]); setSearchInput(""); }}
+            style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 600, fontSize: 12, marginLeft: 10, padding: 0 }}>
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {loading ? <p>Loading…</p> : reports.length === 0 ? (
+        <p style={{ color: "var(--muted)" }}>No reports in this view.</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(440px, 1fr))", gap: 14, alignItems: "start" }}>
+          {reports.map((r) => (
+            <div key={r.id} className="card issue-card"
+              onClick={() => setSelected(r)}
+              style={{ padding: 15, display: "flex", flexDirection: "column", gap: 10, borderColor: r.is_sos ? "var(--danger)" : undefined, borderWidth: r.is_sos ? 2 : 1 }}>
+              {/* top: thumbnail · title/desc · severity */}
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                {r.photo_url ? (
+                  <img src={r.photo_url} alt="" style={{ width: 46, height: 46, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 46, height: 46, borderRadius: 10, background: "var(--primary-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: CATEGORY_COLORS[r.category], flexShrink: 0 }}>
+                    <CategoryIcon category={r.category} size={22} />
+                  </div>
+                )}
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {r.is_sos && <span style={sosBadge}>SOS</span>}
+                    <strong style={{ fontSize: 15, textTransform: "capitalize" }}>{r.sub_type.replace("_", " ")}</strong>
+                    <span style={{ color: CATEGORY_COLORS[r.category], fontSize: 12, fontWeight: 600 }}>{r.category}</span>
+                    {r.department && <span style={deptPill}>{r.department}</span>}
+                  </div>
+                  {r.description && (
+                    <p style={{ margin: "5px 0 0", color: "#46544e", fontSize: 13, lineHeight: 1.45, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.description}</p>
+                  )}
+                </div>
+
+                <SeverityChip score={r.severity_score} />
+              </div>
+
+              {/* footer: status changer · meta */}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+                <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+                  <Select
+                    ariaLabel="Change status"
+                    value={r.status}
+                    onChange={(v) => updateStatus(r.id, v)}
+                    options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
+                    trigger={(cur, open) => <StatusChipTrigger status={cur?.value ?? r.status} label={cur?.label ?? cap(r.status)} open={open} />}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
+                  <span title={`${r.verification_count} upvotes`} style={{ fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                    <UpvoteIcon size={14} /> {r.verification_count}
+                  </span>
+                  <span title={new Date(r.created_at).toLocaleString()} style={{ fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                    <ClockIcon size={13} /> {timeAgo(r.created_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selected && (
+        <ReportDetailDrawer report={selected} onClose={() => setSelected(null)} onStatusChange={updateStatus} />
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, accent = "var(--text)" }: { label: string; value: number; accent?: string }) {
+  return (
+    <div className="card" style={{ padding: "16px 18px" }}>
+      <div style={{ fontSize: 28, fontWeight: 800, color: accent }}>{value}</div>
+      <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+// PostgREST range conditions per severity bucket, OR'd together when several
+// are selected. `low` uses lt.4 (also excludes null/unscored rows).
+const SEVERITY_FILTERS: Record<string, string> = {
+  critical: "severity_score.gte.8",
+  high: "and(severity_score.gte.6,severity_score.lt.8)",
+  medium: "and(severity_score.gte.4,severity_score.lt.6)",
+  low: "severity_score.lt.4",
+};
+
+const SEVERITY_OPTIONS = [
+  { value: "critical", label: "Critical (8–10)" },
+  { value: "high", label: "High (6–7)" },
+  { value: "medium", label: "Medium (4–5)" },
+  { value: "low", label: "Low (1–3)" },
+];
+
+const cap = (s: string) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+/** Colored status pill that doubles as the dropdown trigger (chevron appears on the chip). */
+function StatusChipTrigger({ status, label, open }: { status: string; label: string; open: boolean }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: STATUS_COLORS[status] ?? "#999", color: "#fff",
+      padding: "4px 9px 4px 11px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+      textTransform: "capitalize", whiteSpace: "nowrap",
+    }}>
+      {label}
+      <span style={{ display: "flex", opacity: 0.85, transition: "transform 0.15s ease", transform: open ? "rotate(180deg)" : "none" }}>
+        <ChevronDownIcon size={13} />
+      </span>
+    </span>
+  );
+}
+
+function CategoryIcon({ category, size = 32 }: { category: string; size?: number }) {
+  if (category === "safety") return <ShieldIcon size={size} />;
+  if (category === "utility") return <DropletIcon size={size} />;
+  return <WrenchIcon size={size} />;
+}
+
+const clearBtn: React.CSSProperties = {
+  position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+  border: "none", background: "none", color: "var(--muted)",
+  display: "flex", alignItems: "center", lineHeight: 1, cursor: "pointer", padding: 4,
+};
+
+const timeAgo = (iso: string) => {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+};
+const sosBadge: React.CSSProperties = { background: "var(--danger)", color: "#fff", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 700 };
+const deptPill: React.CSSProperties = { background: "var(--primary-soft)", color: "var(--primary-dark)", padding: "2px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600 };
