@@ -38,7 +38,9 @@
     "harassment": "ہراسانی",
     "disaster": "آفت",
     "water": "پانی",
-    "load_shedding": "لوڈ شیڈنگ"
+    "load_shedding": "لوڈ شیڈنگ",
+    "gas": "گیس",
+    "sos": "ایس او ایس"
   },
   "status": {
     "pending": "زیر التواء",

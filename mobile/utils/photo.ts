@@ -13,7 +13,7 @@ export const uploadPhoto = async (uri: string): Promise<string | null> => {
     const buffer = await new File(uri).arrayBuffer();
 
     const { error } = await supabase.storage
-      .from("report-photos")
+      .from("report_images")
       .upload(filename, buffer, { contentType, upsert: false });
 
     if (error) {
@@ -21,7 +21,7 @@ export const uploadPhoto = async (uri: string): Promise<string | null> => {
       return null;
     }
 
-    const { data } = supabase.storage.from("report-photos").getPublicUrl(filename);
+    const { data } = supabase.storage.from("report_images").getPublicUrl(filename);
     return data.publicUrl;
   } catch (e) {
     console.warn("photo upload error:", e);

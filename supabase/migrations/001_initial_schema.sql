@@ -29,6 +29,7 @@ create table if not exists reports (
   department text,
   status text not null default 'pending'
     check (status in ('pending', 'verified', 'assigned', 'in_progress', 'resolved', 'rejected', 'duplicate')),
+  is_fire boolean not null default false,
   verification_count int not null default 0,
   is_sos boolean not null default false,
   is_anonymous boolean not null default false,
@@ -122,14 +123,14 @@ declare
   recent_count int;
   dup_count int;
 begin
-  -- Rate limit: max 5 reports per user per rolling hour (anti-spam).
+  -- Rate limit: max 25 reports per user per rolling hour (anti-spam, increased for testing).
   if new.user_id is not null then
     select count(*) into recent_count
     from reports
     where user_id = new.user_id
       and created_at > now() - interval '1 hour';
-    if recent_count >= 5 then
-      raise exception 'rate_limit_exceeded: max 5 reports per hour';
+    if recent_count >= 25 then
+      raise exception 'rate_limit_exceeded: max 25 reports per hour';
     end if;
   end if;
 

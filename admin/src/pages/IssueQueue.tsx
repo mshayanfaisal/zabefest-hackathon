@@ -5,18 +5,21 @@ import type { Report } from "../lib/supabase";
 import { SeverityChip, SeverityLegend } from "../components/SeverityIndicator";
 import PageHeader from "../components/PageHeader";
 import ReportDetailDrawer from "../components/ReportDetailDrawer";
+import ResolveConfirmModal from "../components/ResolveConfirmModal";
 import Select from "../components/Select";
 import MultiSelect from "../components/MultiSelect";
-import { SearchIcon, ShieldIcon, DropletIcon, WrenchIcon, XIcon, UpvoteIcon, ClockIcon, ChevronDownIcon } from "../components/icons";
+import { SearchIcon, ShieldIcon, DropletIcon, WrenchIcon, XIcon, UpvoteIcon, ClockIcon, ChevronDownIcon, LockIcon } from "../components/icons";
 
 export default function IssueQueue() {
   const [reports, setReports] = useState<Report[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [severities, setSeverities] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Report | null>(null);
+  const [pendingResolve, setPendingResolve] = useState<{ id: string; report: Report } | null>(null);
   const [params] = useSearchParams();
 
   // Keep the in-page search in sync with the sidebar's global search (?q=).
@@ -30,12 +33,14 @@ export default function IssueQueue() {
   }, [searchInput]);
 
   const fetchReports = useCallback(async () => {
+    console.log("[fetchReports] Triggered");
     let query = supabase
       .from("reports")
       .select("*")
       .neq("status", "duplicate");
 
     if (statuses.length) query = query.in("status", statuses);
+    if (categories.length) query = query.in("category", categories);
 
     // Each selected severity bucket becomes one OR'd range condition, so
     // non-adjacent picks (e.g. Critical + Low) still work.
@@ -58,25 +63,80 @@ export default function IssueQueue() {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    const { data } = await query;
-    setReports((data as Report[]) ?? []);
+    const { data, error } = await query;
+    if (error) console.error("[fetchReports] Error", error);
+    console.log("[fetchReports] Received", data?.length ?? 0, "reports");
+    // Push resolved to the end — priority issues (SOS/severity) float to the top
+    const sorted = sortWithResolvedLast((data as Report[]) ?? []);
+    setReports(sorted);
     setLoading(false);
-  }, [statuses, severities, search]);
+  }, [statuses, severities, categories, search]);
 
   useEffect(() => {
     fetchReports();
     const channel = supabase
       .channel("queue-reports")
-      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, fetchReports)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, (payload) => {
+        console.log('[realtime] payload', payload);
+        const newReport = payload.new as Report;
+        // Re-sort after each realtime update so resolved sinks to the bottom immediately
+        setReports((prev) => {
+          if (payload.eventType === "INSERT") {
+            return sortWithResolvedLast([newReport, ...prev]);
+          } else if (payload.eventType === "UPDATE") {
+            return sortWithResolvedLast(prev.map((r) => (r.id === newReport.id ? newReport : r)));
+          } else if (payload.eventType === "DELETE") {
+            return sortWithResolvedLast(prev.filter((r) => r.id !== payload.old.id));
+          }
+          return prev;
+        });
+        setSelected((s) => (s && s.id === newReport.id ? newReport : s));
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchReports]);
 
-  const updateStatus = async (id: string, status: string) => {
+  // Gate: intercept 'resolved' transitions and show the confirmation modal.
+  // Any other status change proceeds immediately.
+  const updateStatus = (id: string, status: string) => {
+    if (status === "resolved") {
+      const report = reports.find((r) => r.id === id) ?? selected;
+      if (!report) return;
+      // Guard: already resolved — silently ignore (belt-and-suspenders on top of DB policy)
+      if (report.status === "resolved") return;
+      setPendingResolve({ id, report });
+      return;
+    }
+    executeStatusUpdate(id, status);
+  };
+
+  // Performs the actual Supabase update with optimistic UI rollback on failure.
+  const executeStatusUpdate = async (id: string, status: string) => {
+    console.log(`[updateStatus] Initiating status change`, { id, newStatus: status });
+    const previousReports = reports;
+    const previousSelected = selected;
     setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
     setSelected((s) => (s && s.id === id ? { ...s, status } : s));
-    await supabase.from("reports").update({ status }).eq("id", id);
+
+    const { data, error } = await supabase.from("reports").update({ status }).eq("id", id).neq("status", "resolved");
+    console.log(`[updateStatus] Supabase response`, { data, error });
+    if (error) {
+      console.error("[updateStatus] Failed to update status:", error);
+      setReports(previousReports);
+      setSelected(previousSelected);
+    } else {
+      console.log('[updateStatus] Update succeeded, refetching reports');
+      await fetchReports();
+    }
   };
+
+  const handleConfirmResolve = async () => {
+    if (!pendingResolve) return;
+    setPendingResolve(null);
+    await executeStatusUpdate(pendingResolve.id, "resolved");
+  };
+
+  const handleCancelResolve = () => setPendingResolve(null);
 
   const counts = {
     total: reports.length,
@@ -123,6 +183,20 @@ export default function IssueQueue() {
           options={SEVERITY_OPTIONS}
         />
 
+        <MultiSelect
+          ariaLabel="Filter by category"
+          placeholder="All categories"
+          noun="category"
+          nounPlural="categories"
+          values={categories}
+          onChange={setCategories}
+          options={[
+            { value: "infrastructure", label: "Infrastructure" },
+            { value: "safety", label: "Public Safety" },
+            { value: "utility", label: "Utilities" }
+          ]}
+        />
+
         <div style={{ position: "relative", marginLeft: "auto", flex: "1 1 280px", maxWidth: 380 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", display: "flex", pointerEvents: "none" }}><SearchIcon size={16} /></span>
           <input
@@ -140,8 +214,8 @@ export default function IssueQueue() {
 
       <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
         {loading ? "Searching…" : `${reports.length}${reports.length === 100 ? "+" : ""} result${reports.length === 1 ? "" : "s"}`}
-        {(statuses.length > 0 || severities.length > 0 || search) && (
-          <button onClick={() => { setStatuses([]); setSeverities([]); setSearchInput(""); }}
+        {(statuses.length > 0 || severities.length > 0 || categories.length > 0 || search) && (
+          <button onClick={() => { setStatuses([]); setSeverities([]); setCategories([]); setSearchInput(""); }}
             style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 600, fontSize: 12, marginLeft: 10, padding: 0 }}>
             Clear filters
           </button>
@@ -184,13 +258,29 @@ export default function IssueQueue() {
               {/* footer: status changer · meta */}
               <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", paddingTop: 10, borderTop: "1px solid var(--border)" }}>
                 <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
-                  <Select
-                    ariaLabel="Change status"
-                    value={r.status}
-                    onChange={(v) => updateStatus(r.id, v)}
-                    options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
-                    trigger={(cur, open) => <StatusChipTrigger status={cur?.value ?? r.status} label={cur?.label ?? cap(r.status)} open={open} />}
-                  />
+                  {r.status === "resolved" ? (
+                    /* Locked resolved badge — no dropdown, no interaction */
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      background: `${STATUS_COLORS.resolved}18`, color: STATUS_COLORS.resolved,
+                      padding: "5px 10px 5px 10px", borderRadius: 999,
+                      fontSize: 12, fontWeight: 700, textTransform: "capitalize",
+                      border: `1px solid ${STATUS_COLORS.resolved}35`,
+                      userSelect: "none", cursor: "default",
+                    }}>
+                      <LockIcon size={11} />
+                      Resolved · Final
+                    </span>
+                  ) : (
+                    /* Show all statuses including Resolved — selecting it triggers the confirmation modal */
+                    <Select
+                      ariaLabel="Change status"
+                      value={r.status}
+                      onChange={(v) => updateStatus(r.id, v)}
+                      options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
+                      trigger={(cur, open) => <StatusChipTrigger status={cur?.value ?? r.status} label={cur?.label ?? cap(r.status)} open={open} />}
+                    />
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: 12, alignItems: "center", minWidth: 0 }}>
                   <span title={`${r.verification_count} upvotes`} style={{ fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
@@ -208,6 +298,14 @@ export default function IssueQueue() {
 
       {selected && (
         <ReportDetailDrawer report={selected} onClose={() => setSelected(null)} onStatusChange={updateStatus} />
+      )}
+
+      {pendingResolve && (
+        <ResolveConfirmModal
+          report={pendingResolve.report}
+          onConfirm={handleConfirmResolve}
+          onCancel={handleCancelResolve}
+        />
       )}
     </div>
   );
@@ -278,3 +376,18 @@ const timeAgo = (iso: string) => {
 };
 const sosBadge: React.CSSProperties = { background: "var(--danger)", color: "#fff", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 700 };
 const deptPill: React.CSSProperties = { background: "var(--primary-soft)", color: "var(--primary-dark)", padding: "2px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600 };
+
+/**
+ * Keeps the existing SOS → severity → recency ordering for all non-resolved issues,
+ * then appends all resolved issues at the very end (sorted by recency within themselves).
+ */
+function sortWithResolvedLast(reports: import("../lib/supabase").Report[]) {
+  const active = reports
+    .filter((r) => r.status !== "resolved")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const resolved = reports
+    .filter((r) => r.status === "resolved")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  return [...active, ...resolved];
+}
+

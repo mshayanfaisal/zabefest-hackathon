@@ -97,3 +97,7 @@ export const UpvoteIcon = ({ size = 14 }: P) => (
 export const ClockIcon = ({ size = 14 }: P) => (
   <svg {...base(size)}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
 );
+
+export const LockIcon = ({ size = 16 }: P) => (
+  <svg {...base(size)}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+);

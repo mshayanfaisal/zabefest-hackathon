@@ -9,13 +9,14 @@ import FeedScreen from "./screens/FeedScreen";
 import ReportScreen from "./screens/ReportScreen";
 import MapScreen from "./screens/MapScreen";
 import SOSScreen from "./screens/SOSScreen";
+import { Feather } from '@expo/vector-icons';
 
 type Tab = "feed" | "report" | "map" | "sos";
-const TABS: { key: Tab; icon: string }[] = [
-  { key: "feed", icon: "📋" },
-  { key: "report", icon: "➕" },
-  { key: "map", icon: "🗺️" },
-  { key: "sos", icon: "🆘" },
+const TABS: { key: Tab; icon: keyof typeof Feather.glyphMap }[] = [
+  { key: "feed", icon: "list" },
+  { key: "report", icon: "plus-circle" },
+  { key: "map", icon: "map" },
+  { key: "sos", icon: "alert-triangle" },
 ];
 
 export default function App() {
@@ -49,7 +50,11 @@ export default function App() {
       <View style={styles.tabBar}>
         {TABS.map((item) => (
           <TouchableOpacity key={item.key} style={styles.tabItem} onPress={() => setTab(item.key)}>
-            <Text style={styles.tabIcon}>{item.icon}</Text>
+            <Feather 
+              name={item.icon} 
+              size={24} 
+              color={item.key === "sos" ? theme.danger : (tab === item.key ? theme.primary : theme.muted)} 
+            />
             <Text
               style={[
                 styles.tabLabel,
@@ -73,10 +78,9 @@ const styles = StyleSheet.create({
   langBtn: { borderWidth: 1, borderColor: "rgba(255,255,255,0.6)", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5 },
   langText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   body: { flex: 1 },
-  tabBar: { flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: theme.border, paddingBottom: Platform.OS === "ios" ? 18 : 8, paddingTop: 8 },
+  tabBar: { flexDirection: "row", backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: theme.border, paddingBottom: Platform.OS === "ios" ? 24 : 12, paddingTop: 12 },
   tabItem: { flex: 1, alignItems: "center" },
-  tabIcon: { fontSize: 22 },
-  tabLabel: { fontSize: 11, color: theme.muted, marginTop: 2 },
+  tabLabel: { fontSize: 11, color: theme.muted, marginTop: 4, fontWeight: "500" },
   tabLabelActive: { color: theme.primary, fontWeight: "700" },
-  tabLabelSos: { color: theme.danger },
+  tabLabelSos: { color: theme.danger, fontWeight: "700" },
 });

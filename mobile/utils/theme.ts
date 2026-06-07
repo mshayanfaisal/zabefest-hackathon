@@ -1,26 +1,26 @@
 export const theme = {
-  primary: "#1a6b4a",
-  primaryDark: "#13503a",
-  danger: "#c0392b",
-  bg: "#f5f7f6",
-  card: "#ffffff",
-  text: "#1c2522",
-  muted: "#6b7672",
-  border: "#e2e8e5",
+  primary: "#114C3A",
+  primaryDark: "#0B3226",
+  danger: "#E63946",
+  bg: "#F3F4F6",
+  card: "#FFFFFF",
+  text: "#111827",
+  muted: "#6B7280",
+  border: "#E5E7EB",
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  pending: "#95a5a6",
-  verified: "#2980b9",
-  assigned: "#8e44ad",
-  in_progress: "#e67e22",
-  resolved: "#27ae60",
-  rejected: "#7f8c8d",
-  duplicate: "#bdc3c7",
+  pending: "#9CA3AF",
+  verified: "#3B82F6",
+  assigned: "#8B5CF6",
+  in_progress: "#F59E0B",
+  resolved: "#10B981",
+  rejected: "#6B7280",
+  duplicate: "#D1D5DB",
 };
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  infrastructure: "#e67e22",
-  safety: "#c0392b",
-  utility: "#2980b9",
+  infrastructure: "#F59E0B",
+  safety: "#E63946",
+  utility: "#3B82F6",
 };

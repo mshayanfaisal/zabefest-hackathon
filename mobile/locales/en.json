@@ -38,7 +38,9 @@
     "harassment": "Harassment",
     "disaster": "Disaster",
     "water": "Water",
-    "load_shedding": "Load Shedding"
+    "load_shedding": "Load Shedding",
+    "gas": "Gas",
+    "sos": "SOS"
   },
   "status": {
     "pending": "Pending",

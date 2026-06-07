@@ -27,6 +27,7 @@ export type Report = {
   verification_count: number;
   is_sos: boolean;
   is_anonymous: boolean;
+  is_fire: boolean;
   created_at: string;
 };
 

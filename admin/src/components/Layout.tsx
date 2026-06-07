@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import {
   QueueIcon, HeatmapIcon, AnalyticsIcon, SosIcon, GlobeIcon,
@@ -18,6 +18,25 @@ export default function Layout() {
   const [sosCount, setSosCount] = useState(0);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(STORAGE_KEY) === "1");
   const [q, setQ] = useState(params.get("q") ?? "");
+  const [toasts, setToasts] = useState<{ id: number; type: "sos" | "standard"; message: string }[]>([]);
+
+  const addToast = useCallback((type: "sos" | "standard", message: string) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, type, message }]);
+    
+    if (type === "sos") {
+      try {
+        const audio = new Audio('/alert.mp3');
+        audio.play().catch((e) => console.warn('Audio autoplay blocked:', e));
+      } catch (e) {
+        console.warn('Audio playback error:', e);
+      }
+    }
+
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 6000);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
@@ -36,10 +55,21 @@ export default function Layout() {
     load();
     const ch = supabase
       .channel("sidebar-sos")
-      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reports" }, (payload) => {
+        load();
+        if (payload.eventType === "INSERT") {
+          const report = payload.new;
+          if (report.is_sos || report.type === "fire" || report.is_fire || report.sub_type === "fire") {
+            addToast("sos", "CRITICAL: New SOS Alert Received");
+          } else {
+            const categoryLabel = report.category ? report.category.charAt(0).toUpperCase() + report.category.slice(1) : "New";
+            addToast("standard", `New ${categoryLabel} report submitted`);
+          }
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, []);
+  }, [addToast]);
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0"); }, [collapsed]);
 
@@ -169,6 +199,33 @@ export default function Layout() {
       <main style={{ flex: 1, overflow: "auto", height: "100vh" }}>
         <Outlet />
       </main>
+
+      {/* Toast Notifications Container */}
+      <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 9999, display: "flex", flexDirection: "column", gap: 10, alignItems: "center", pointerEvents: "none" }}>
+        {toasts.map((t) => (
+          <div key={t.id} style={{
+            background: t.type === "sos" ? "#DC2626" : "#10B981",
+            color: "#ffffff",
+            padding: "24px 36px",
+            borderRadius: 16,
+            minWidth: 420,
+            boxShadow: t.type === "sos" ? "none" : "0 10px 40px rgba(16, 185, 129, 0.3)",
+            fontWeight: 700,
+            fontSize: 18,
+            border: t.type === "sos" ? "2px solid #EF4444" : "none",
+            animation: t.type === "sos" ? "toastSlideDown 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards, pulseBorder 1.5s infinite" : "toastSlideDown 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            pointerEvents: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            textTransform: t.type === "sos" ? "uppercase" : "none",
+            letterSpacing: t.type === "sos" ? "0.05em" : "normal"
+          }}>
+            <span style={{ fontSize: 28, lineHeight: 1 }}>{t.type === "sos" ? "🚨" : "✅"}</span>
+            <span style={{ flex: 1 }}>{t.message}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

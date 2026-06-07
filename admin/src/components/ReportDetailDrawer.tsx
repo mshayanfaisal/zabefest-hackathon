@@ -4,7 +4,7 @@ import { supabase, STATUS_ORDER, CATEGORY_COLORS, severityColor } from "../lib/s
 import type { Report } from "../lib/supabase";
 import StatusBadge from "./StatusBadge";
 import Select from "./Select";
-import { XIcon, ExternalLinkIcon, CheckIcon } from "./icons";
+import { XIcon, ExternalLinkIcon, CheckIcon, LockIcon } from "./icons";
 import "leaflet/dist/leaflet.css";
 
 type HistoryRow = { id: string; old_status: string | null; new_status: string; changed_at: string };
@@ -123,23 +123,49 @@ export default function ReportDetailDrawer({
 
           {/* workflow */}
           <Section title="Authority Workflow">
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <label style={{ fontSize: 13, color: "var(--muted)" }}>Status</label>
-              <Select
-                ariaLabel="Change status"
-                minWidth={180}
-                value={report.status}
-                onChange={(v) => onStatusChange(report.id, v)}
-                options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
-              />
-            </div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12 }}>
-              <input className="input" placeholder="Department (e.g. KMC)" value={dept}
-                onChange={(e) => setDept(e.target.value)} style={{ flex: 1 }} />
-              <button className="btn btn-primary" onClick={assign} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                {saved ? <><CheckIcon size={15} /> Saved</> : "Assign"}
-              </button>
-            </div>
+            {report.status === "resolved" ? (
+              /* Permanently locked — no controls rendered */
+              <div style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: "#f0fdf4", border: "1px solid #bbf7d0",
+                borderRadius: "var(--radius-sm)", padding: "14px 16px",
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: "#dcfce7", border: "1px solid #86efac",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#16a34a", flexShrink: 0,
+                }}>
+                  <LockIcon size={16} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#15803d" }}>Issue Permanently Closed</div>
+                  <div style={{ fontSize: 12, color: "#166534", marginTop: 2, lineHeight: 1.4 }}>
+                    This issue has been fully resolved and is now locked. No further changes can be made.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <label style={{ fontSize: 13, color: "var(--muted)" }}>Status</label>
+                  <Select
+                    ariaLabel="Change status"
+                    minWidth={180}
+                    value={report.status}
+                    onChange={(v) => onStatusChange(report.id, v)}
+                    options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12 }}>
+                  <input className="input" placeholder="Department (e.g. KMC)" value={dept}
+                    onChange={(e) => setDept(e.target.value)} style={{ flex: 1 }} />
+                  <button className="btn btn-primary" onClick={assign} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    {saved ? <><CheckIcon size={15} /> Saved</> : "Assign"}
+                  </button>
+                </div>
+              </>
+            )}
           </Section>
 
           {/* timeline */}
