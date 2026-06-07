@@ -34,9 +34,16 @@ export default function ReportCard({ report }: { report: Report }) {
         </View>
       </View>
 
-      <Text style={[styles.category, { color: CATEGORY_COLORS[report.category] }]}>
-        {t(`categories.${report.category}`)}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, gap: 6 }}>
+        <Text style={[styles.category, { color: CATEGORY_COLORS[report.category] }]}>
+          {t(`categories.${report.category}`)}
+        </Text>
+        {report.area && (
+          <View style={styles.areaBadge}>
+            <Text style={styles.areaBadgeText}>📍 {report.area}</Text>
+          </View>
+        )}
+      </View>
 
       {report.description ? <Text style={styles.desc}>{report.description}</Text> : null}
 
@@ -91,4 +98,6 @@ const styles = StyleSheet.create({
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   statusText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   meta: { fontSize: 12, color: theme.muted },
+  areaBadge: { backgroundColor: "#F3F4F6", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "#E5E7EB" },
+  areaBadgeText: { fontSize: 10, color: "#4B5563", fontWeight: "600" },
 });

@@ -21,6 +21,11 @@ create table if not exists reports (
   -- safety:         unsafe_zone | harassment | sos | disaster
   -- utility:        water | load_shedding
   description text,
+  area text,
+  address text,
+  user_name text,
+  user_phone text,
+  user_nic text,
   photo_url text,
   lat double precision not null,
   lng double precision not null,

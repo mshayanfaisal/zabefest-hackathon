@@ -15,6 +15,7 @@ export default function IssueQueue() {
   const [statuses, setStatuses] = useState<string[]>([]);
   const [severities, setSeverities] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [areas, setAreas] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,7 @@ export default function IssueQueue() {
 
     if (statuses.length) query = query.in("status", statuses);
     if (categories.length) query = query.in("category", categories);
+    if (areas.length) query = query.in("area", areas);
 
     // Each selected severity bucket becomes one OR'd range condition, so
     // non-adjacent picks (e.g. Critical + Low) still work.
@@ -70,7 +72,7 @@ export default function IssueQueue() {
     const sorted = sortWithResolvedLast((data as Report[]) ?? []);
     setReports(sorted);
     setLoading(false);
-  }, [statuses, severities, categories, search]);
+  }, [statuses, severities, categories, areas, search]);
 
   useEffect(() => {
     fetchReports();
@@ -145,6 +147,14 @@ export default function IssueQueue() {
     pending: reports.filter((r) => r.status === "pending").length,
   };
 
+  const areaCounts = reports.reduce((acc, r) => {
+    if (r.area) acc[r.area] = (acc[r.area] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const topAreas = Object.entries(areaCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
   return (
     <div style={{ padding: 28, maxWidth: 1240, margin: "0 auto" }}>
       <PageHeader
@@ -153,15 +163,52 @@ export default function IssueQueue() {
         right={<SeverityLegend />}
       />
 
+      {/* Top 3 Areas Analytics */}
+      {topAreas.length > 0 && (
+        <div style={{ display: "flex", gap: 14, marginBottom: 22, flexWrap: "wrap" }}>
+          {topAreas.map(([area, count], idx) => (
+             <div key={area} className="card" style={{ padding: "16px 18px", flex: 1, minWidth: 200, borderLeft: idx === 0 ? "4px solid var(--danger)" : "4px solid var(--primary)" }}>
+                <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>Top Issue Area #{idx + 1}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, marginTop: 4, color: "var(--text)" }}>{area}</div>
+                <div style={{ fontSize: 13, color: "var(--primary)", fontWeight: 700, marginTop: 4 }}>{count} Active Reports</div>
+             </div>
+          ))}
+        </div>
+      )}
+
       {/* stat strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 22 }}>
-        <Stat label="Open issues" value={counts.total} />
-        <Stat label="Active SOS" value={counts.sos} accent="var(--danger)" />
-        <Stat label="Critical (8–10)" value={counts.critical} accent="var(--warn)" />
-        <Stat label="Awaiting triage" value={counts.pending} accent="var(--primary)" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "16px", marginBottom: "24px" }}>
+        <Stat label="Open issues" value={counts.total} accent="#10B981" />
+        <Stat label="Active SOS" value={counts.sos} accent="#EF4444" bg={counts.sos > 0 ? "#FEF2F2" : "#ffffff"} />
+        <Stat label="Critical (8–10)" value={counts.critical} accent="#F59E0B" />
+        <Stat label="Awaiting triage" value={counts.pending} accent="#3B82F6" />
       </div>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+      {/* Sleek Filter & Search Bar */}
+      <div style={{ display: "flex", gap: "12px", marginBottom: "20px", alignItems: "center", flexWrap: "wrap" }}>
+        
+        {/* Search Bar */}
+        <div style={{ position: "relative", flex: "1 1 240px", maxWidth: 360 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF", display: "flex", pointerEvents: "none" }}>
+            <SearchIcon size={16} />
+          </span>
+          <input
+            className="input"
+            placeholder="Search reports..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            style={{ 
+              width: "100%", paddingLeft: 36, paddingRight: 32,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+            }}
+          />
+          {searchInput && (
+            <button onClick={() => setSearchInput("")} aria-label="Clear search" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#9CA3AF", padding: 0 }}>
+              <XIcon size={14} />
+            </button>
+          )}
+        </div>
+
         <MultiSelect
           ariaLabel="Filter by status"
           placeholder="All statuses"
@@ -171,18 +218,16 @@ export default function IssueQueue() {
           onChange={setStatuses}
           options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
         />
-
         <MultiSelect
           ariaLabel="Filter by severity"
           placeholder="All severities"
           noun="severity"
           nounPlural="severities"
-          minWidth={188}
+          minWidth={160}
           values={severities}
           onChange={setSeverities}
           options={SEVERITY_OPTIONS}
         />
-
         <MultiSelect
           ariaLabel="Filter by category"
           placeholder="All categories"
@@ -196,30 +241,27 @@ export default function IssueQueue() {
             { value: "utility", label: "Utilities" }
           ]}
         />
-
-        <div style={{ position: "relative", marginLeft: "auto", flex: "1 1 280px", maxWidth: 380 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", display: "flex", pointerEvents: "none" }}><SearchIcon size={16} /></span>
-          <input
-            className="input"
-            placeholder="Search type, description, department…"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            style={{ width: "100%", paddingLeft: 34, paddingRight: searchInput ? 32 : 12 }}
-          />
-          {searchInput && (
-            <button onClick={() => setSearchInput("")} aria-label="Clear search" style={clearBtn}><XIcon size={15} /></button>
-          )}
-        </div>
-      </div>
-
-      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
-        {loading ? "Searching…" : `${reports.length}${reports.length === 100 ? "+" : ""} result${reports.length === 1 ? "" : "s"}`}
-        {(statuses.length > 0 || severities.length > 0 || categories.length > 0 || search) && (
-          <button onClick={() => { setStatuses([]); setSeverities([]); setCategories([]); setSearchInput(""); }}
-            style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 600, fontSize: 12, marginLeft: 10, padding: 0 }}>
-            Clear filters
+        <MultiSelect
+          ariaLabel="Filter by area"
+          placeholder="All Areas"
+          noun="area"
+          nounPlural="areas"
+          values={areas}
+          onChange={setAreas}
+          options={KARACHI_AREAS.map(a => ({ value: a, label: a }))}
+        />
+        
+        {(statuses.length > 0 || severities.length > 0 || categories.length > 0 || areas.length > 0 || search) && (
+          <button onClick={() => { setStatuses([]); setSeverities([]); setCategories([]); setAreas([]); setSearchInput(""); }}
+            style={{ background: "none", border: "none", color: "#EF4444", fontWeight: 700, fontSize: 13, cursor: "pointer", padding: "8px" }}
+          >
+            Clear Filters
           </button>
         )}
+      </div>
+
+      <div style={{ fontSize: 13, color: "#6B7280", fontWeight: 600, marginBottom: 16 }}>
+        {loading ? "Searching..." : `${reports.length}${reports.length === 100 ? "+" : ""} report${reports.length === 1 ? "" : "s"} found`}
       </div>
 
       {loading ? <p>Loading…</p> : reports.length === 0 ? (
@@ -246,6 +288,7 @@ export default function IssueQueue() {
                     <strong style={{ fontSize: 15, textTransform: "capitalize" }}>{r.sub_type.replace("_", " ")}</strong>
                     <span style={{ color: CATEGORY_COLORS[r.category], fontSize: 12, fontWeight: 600 }}>{r.category}</span>
                     {r.department && <span style={deptPill}>{r.department}</span>}
+                    {r.area && <span style={areaPill}>{r.area}</span>}
                   </div>
                   {r.description && (
                     <p style={{ margin: "5px 0 0", color: "#46544e", fontSize: 13, lineHeight: 1.45, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{r.description}</p>
@@ -311,11 +354,17 @@ export default function IssueQueue() {
   );
 }
 
-function Stat({ label, value, accent = "var(--text)" }: { label: string; value: number; accent?: string }) {
+function Stat({ label, value, accent = "#111827", bg = "rgba(255, 255, 255, 0.66)" }: { label: string; value: number; accent?: string; bg?: string }) {
   return (
-    <div className="card" style={{ padding: "16px 18px" }}>
-      <div style={{ fontSize: 28, fontWeight: 800, color: accent }}>{value}</div>
-      <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>{label}</div>
+    <div className="card" style={{ 
+      padding: "16px 18px", 
+      backgroundColor: bg, 
+      display: "flex", flexDirection: "column", gap: "2px",
+      position: "relative", overflow: "hidden",
+      borderTop: `4px solid ${accent}`
+    }}>
+      <div style={{ fontSize: "12px", color: "#6B7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", opacity: 0.85 }}>{label}</div>
+      <div style={{ fontSize: "28px", fontWeight: 800, color: "#111827", lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
@@ -361,12 +410,6 @@ function CategoryIcon({ category, size = 32 }: { category: string; size?: number
   return <WrenchIcon size={size} />;
 }
 
-const clearBtn: React.CSSProperties = {
-  position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-  border: "none", background: "none", color: "var(--muted)",
-  display: "flex", alignItems: "center", lineHeight: 1, cursor: "pointer", padding: 4,
-};
-
 const timeAgo = (iso: string) => {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (m < 60) return `${m}m ago`;
@@ -376,6 +419,7 @@ const timeAgo = (iso: string) => {
 };
 const sosBadge: React.CSSProperties = { background: "var(--danger)", color: "#fff", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 700 };
 const deptPill: React.CSSProperties = { background: "var(--primary-soft)", color: "var(--primary-dark)", padding: "2px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600 };
+const areaPill: React.CSSProperties = { background: "#F3F4F6", color: "#374151", padding: "2px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid #E5E7EB" };
 
 /**
  * Keeps the existing SOS → severity → recency ordering for all non-resolved issues,
@@ -390,4 +434,15 @@ function sortWithResolvedLast(reports: import("../lib/supabase").Report[]) {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return [...active, ...resolved];
 }
+
+const KARACHI_AREAS = [
+  "Agra Taj Colony", "Azizabad", "Bahadurabad", "Baldia Town", "Banaras Colony", "Bath Island", "Bihar Colony", 
+  "Bin Qasim Town", "Boat Basin", "Buffer Zone", "Civil Lines", "Clifton", "DHA", "Dalmia", "Daryaabad", "Essa Nagri", 
+  "Federal B Area", "Gadap Town", "Garden", "Gulistan-e-Johar", "Gulshan-e-Hadeed", "Gulshan-e-Iqbal", "Gulzar-e-Hijri", 
+  "Hyderi", "Ibrahim Hyderi", "Kalri", "Karimabad", "Karsaz", "Khadda", "Kharadar", "Korangi", "Landhi", "Liaquatabad", 
+  "Lyari", "Malir", "Malir Cantt", "Malir Halt", "Manghopir", "Metroville", "Mithadar", "Model Colony", 
+  "Muhammad Ali Society", "Nazimabad", "North Nazimabad", "Nursery", "Orangi Town", "PECHS", "PIB Colony", "Pak Colony", 
+  "Pehlwan Goth", "Qasba Colony", "Quaidabad", "Rehri Goth", "SITE Area", "Saddar", "Safoora Goth", "Sakhi Hassan", 
+  "Scheme 33", "Shah Faisal Colony", "Shahrah-e-Faisal", "Shanti Nagar", "Steel Town", "Tariq Road", "Tipu Sultan"
+];
 

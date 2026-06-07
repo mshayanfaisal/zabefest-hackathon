@@ -15,6 +15,11 @@ export type QueuedReport = {
   is_anonymous: boolean;
   is_sos?: boolean;
   severity_score?: number;
+  area?: string;
+  address?: string;
+  user_name?: string;
+  user_phone?: string;
+  user_nic?: string;
   queued_at: string;
 };
 

@@ -11,6 +11,11 @@ export type Report = {
   category: Category;
   sub_type: string;
   description: string | null;
+  area?: string;
+  address?: string;
+  user_name?: string;
+  user_phone?: string;
+  user_nic?: string;
   photo_url: string | null;
   lat: number;
   lng: number;

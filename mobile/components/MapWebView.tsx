@@ -9,7 +9,7 @@ export default function MapWebView({ reports, onPinTap }: { reports: Report[], o
     const markers = reports
       .filter((r) => typeof r.lat === "number" && typeof r.lng === "number")
       .map((r) => {
-        const isEmergency = r.is_sos || r.is_fire || r.severity_score >= 8;
+        const isEmergency = r.is_sos || r.is_fire || (r.severity_score ?? 0) >= 8;
         return {
           lat: r.lat,
           lng: r.lng,

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, Vibration, Animated, Pressable, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { supabase } from "../utils/supabase";
 import { ensureSession } from "../utils/auth";
@@ -69,6 +70,12 @@ export default function SOSScreen() {
       const loc = await Location.getCurrentPositionAsync({});
       await ensureSession();
 
+      const userArea = await AsyncStorage.getItem("user_area");
+      const userAddress = await AsyncStorage.getItem("user_address");
+      const userName = await AsyncStorage.getItem("user_name");
+      const userPhone = await AsyncStorage.getItem("user_phone");
+      const userNic = await AsyncStorage.getItem("user_nic");
+
       const { data, error } = await supabase
         .from("reports")
         .insert({
@@ -79,6 +86,11 @@ export default function SOSScreen() {
           lng: loc.coords.longitude,
           is_sos: true,
           severity_score: 10,
+          area: userArea || "Unknown",
+          address: userAddress || "",
+          user_name: userName || "",
+          user_phone: userPhone || "",
+          user_nic: userNic || "",
         })
         .select()
         .single();

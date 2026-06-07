@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   Switch, StyleSheet, ActivityIndicator, Image, Modal
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import NetInfo from "@react-native-community/netinfo";
@@ -74,6 +75,12 @@ export default function ReportScreen({ onDone }: { onDone?: () => void }) {
       const lng = loc.coords.longitude;
 
       const net = await NetInfo.fetch();
+      
+      const userArea = await AsyncStorage.getItem("user_area");
+      const userAddress = await AsyncStorage.getItem("user_address");
+      const userName = await AsyncStorage.getItem("user_name");
+      const userPhone = await AsyncStorage.getItem("user_phone");
+      const userNic = await AsyncStorage.getItem("user_nic");
 
       // Offline → queue (photo upload needs network, so defer it).
       if (!net.isConnected) {
@@ -82,6 +89,11 @@ export default function ReportScreen({ onDone }: { onDone?: () => void }) {
           lat, lng, is_anonymous: isAnonymous,
           severity_score: ruleSeverity(subType),
           queued_at: new Date().toISOString(),
+          area: userArea || "Unknown",
+          address: userAddress || "",
+          user_name: userName || "",
+          user_phone: userPhone || "",
+          user_nic: userNic || "",
         });
         setSuccessVisible(true);
         return;
@@ -108,6 +120,11 @@ export default function ReportScreen({ onDone }: { onDone?: () => void }) {
           lat, lng, photo_url, is_anonymous: isAnonymous,
           is_fire: isFire(subType),
           severity_score: isFire(subType) ? 10 : ruleSeverity(subType),
+          area: userArea || "Unknown",
+          address: userAddress || "",
+          user_name: userName || "",
+          user_phone: userPhone || "",
+          user_nic: userNic || "",
         })
         .select()
         .single();

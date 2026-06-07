@@ -9,6 +9,7 @@ import FeedScreen from "./screens/FeedScreen";
 import ReportScreen from "./screens/ReportScreen";
 import MapScreen from "./screens/MapScreen";
 import SOSScreen from "./screens/SOSScreen";
+import AreaSetupModal from "./components/AreaSetupModal";
 import { Feather } from '@expo/vector-icons';
 
 type Tab = "feed" | "report" | "map" | "sos";
@@ -67,6 +68,8 @@ export default function App() {
           </TouchableOpacity>
         ))}
       </View>
+
+      <AreaSetupModal onComplete={() => console.log("Area setup complete")} />
     </SafeAreaView>
   );
 }

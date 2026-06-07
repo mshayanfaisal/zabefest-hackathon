@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, StyleSheet, RefreshControl, ScrollView, TouchableOpacity } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../utils/supabase";
 import { Report } from "../utils/types";
 import { useT } from "../utils/i18n";
@@ -11,19 +12,28 @@ export default function FeedScreen() {
   const [reports, setReports] = useState<Report[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [activeArea, setActiveArea] = useState<string>("All Areas");
+
+  useEffect(() => {
+    AsyncStorage.getItem("user_area").then((area) => {
+      if (area) setActiveArea(area);
+    });
+  }, []);
 
   const displayedReports = reports.filter(r => {
-    if (activeCategory === "All") return true;
-    if (activeCategory === "Infrastructure" && r.category === "infrastructure") return true;
-    if (activeCategory === "Public Safety" && r.category === "safety") return true;
-    if (activeCategory === "Utilities" && r.category === "utility") return true;
-    return false;
+    if (activeCategory !== "All") {
+      if (activeCategory === "Infrastructure" && r.category !== "infrastructure") return false;
+      if (activeCategory === "Public Safety" && r.category !== "safety") return false;
+      if (activeCategory === "Utilities" && r.category !== "utility") return false;
+    }
+    if (activeArea !== "All Areas" && r.area !== activeArea) return false;
+    return true;
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const fetchReports = useCallback(async () => {
     const { data } = await supabase
       .from("reports")
-      .select("*")
+      .select("id, category, sub_type, description, photo_url, lat, lng, severity_score, severity_reason, department, status, verification_count, is_sos, is_fire, created_at, area")
       .neq("status", "duplicate")
       .order("is_sos", { ascending: false })
       .order("created_at", { ascending: false })
@@ -64,15 +74,33 @@ export default function FeedScreen() {
             <TouchableOpacity 
               key={cat} 
               onPress={() => setActiveCategory(cat)}
-              style={[
-                styles.pill, 
-                activeCategory === cat ? styles.pillActive : styles.pillInactive
-              ]}
+              style={[styles.pill, activeCategory === cat ? styles.pillActive : styles.pillInactive]}
             >
-              <Text style={[
-                styles.pillText,
-                activeCategory === cat ? styles.pillTextActive : styles.pillTextInactive
-              ]}>{cat}</Text>
+              <Text style={[styles.pillText, activeCategory === cat ? styles.pillTextActive : styles.pillTextInactive]}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={{ marginBottom: 16 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillContainer}>
+          {[
+            "All Areas",
+            "Clifton", "DHA", "Saddar", "Civil Lines", "Kharadar", "Mithadar", "Garden", "Boat Basin", "Bath Island",
+            "Gulshan-e-Iqbal", "Gulistan-e-Johar", "Scheme 33", "PIB Colony", "Gulzar-e-Hijri", "Safoora Goth", "Pehlwan Goth", "Dalmia", "Karsaz", "Shanti Nagar", "Essa Nagri",
+            "PECHS", "Bahadurabad", "Shahrah-e-Faisal", "Tipu Sultan", "Nursery", "Tariq Road", "Muhammad Ali Society",
+            "Nazimabad", "North Nazimabad", "Federal B Area", "Liaquatabad", "Buffer Zone", "Hyderi", "Sakhi Hassan", "Karimabad", "Azizabad",
+            "Orangi Town", "Baldia Town", "SITE Area", "Qasba Colony", "Banaras Colony", "Pak Colony", "Metroville", "Manghopir",
+            "Korangi", "Landhi", "Shah Faisal Colony", "Model Colony", "Malir Halt", "Quaidabad",
+            "Malir", "Malir Cantt", "Gadap Town", "Bin Qasim Town", "Ibrahim Hyderi", "Gulshan-e-Hadeed", "Steel Town", "Rehri Goth",
+            "Lyari", "Kalri", "Agra Taj Colony", "Bihar Colony", "Khadda", "Daryaabad"
+          ].map((area) => (
+            <TouchableOpacity 
+              key={area} 
+              onPress={() => setActiveArea(area)}
+              style={[styles.pillArea, activeArea === area ? styles.pillActiveArea : styles.pillInactive]}
+            >
+              <Text style={[styles.pillText, activeArea === area ? styles.pillTextActive : styles.pillTextInactive]}>{area}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -96,9 +124,11 @@ const styles = StyleSheet.create({
   empty: { textAlign: "center", color: theme.muted, marginTop: 60, paddingHorizontal: 32, lineHeight: 22 },
   pillContainer: { paddingHorizontal: 16, gap: 8, paddingBottom: 4 },
   pill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8 },
+  pillArea: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginRight: 8 },
   pillActive: { backgroundColor: '#047857' },
+  pillActiveArea: { backgroundColor: theme.primary },
   pillInactive: { backgroundColor: '#e5e7eb' },
-  pillText: { fontWeight: '600', fontSize: 14 },
+  pillText: { fontWeight: '600', fontSize: 13 },
   pillTextActive: { color: '#ffffff' },
   pillTextInactive: { color: '#374151' },
 });

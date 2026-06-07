@@ -201,30 +201,48 @@ export default function Layout() {
       </main>
 
       {/* Toast Notifications Container */}
-      <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 9999, display: "flex", flexDirection: "column", gap: 10, alignItems: "center", pointerEvents: "none" }}>
-        {toasts.map((t) => (
-          <div key={t.id} style={{
-            background: t.type === "sos" ? "#DC2626" : "#10B981",
-            color: "#ffffff",
-            padding: "24px 36px",
-            borderRadius: 16,
-            minWidth: 420,
-            boxShadow: t.type === "sos" ? "none" : "0 10px 40px rgba(16, 185, 129, 0.3)",
-            fontWeight: 700,
-            fontSize: 18,
-            border: t.type === "sos" ? "2px solid #EF4444" : "none",
-            animation: t.type === "sos" ? "toastSlideDown 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards, pulseBorder 1.5s infinite" : "toastSlideDown 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
-            pointerEvents: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            textTransform: t.type === "sos" ? "uppercase" : "none",
-            letterSpacing: t.type === "sos" ? "0.05em" : "normal"
-          }}>
-            <span style={{ fontSize: 28, lineHeight: 1 }}>{t.type === "sos" ? "🚨" : "✅"}</span>
-            <span style={{ flex: 1 }}>{t.message}</span>
-          </div>
-        ))}
+      <div style={{ position: "fixed", top: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column", gap: 16, alignItems: "flex-end", pointerEvents: "none" }}>
+        {toasts.map((t) => {
+          const isSos = t.type === "sos";
+          return (
+            <div key={t.id} style={{
+              background: isSos ? "rgba(153, 27, 27, 0.95)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              color: isSos ? "#ffffff" : "#111827",
+              padding: "16px 20px",
+              borderRadius: "12px",
+              minWidth: 320,
+              maxWidth: 400,
+              boxShadow: isSos ? "0 10px 40px -10px rgba(220, 38, 38, 0.4)" : "0 8px 30px -10px rgba(0, 0, 0, 0.1)",
+              border: isSos ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid rgba(229, 231, 235, 0.8)",
+              animation: "slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+              pointerEvents: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+            }}>
+              {isSos ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", background: "rgba(255, 255, 255, 0.15)", color: "#ffffff", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", background: "rgba(16, 185, 129, 0.15)", color: "#059669", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.01em" }}>
+                  {isSos ? "Emergency Alert" : "System Notification"}
+                </span>
+                <span style={{ fontSize: 13, color: isSos ? "#FECACA" : "#6B7280", marginTop: 2, fontWeight: 500 }}>
+                  {t.message}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
