@@ -19,6 +19,13 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - uses: FirebaseExtended/action-hosting-deploy@v0
+        env:
+          # Make npm's download of firebase-tools resilient to transient
+          # registry blips (ECONNRESET) on the runner.
+          NPM_CONFIG_FETCH_RETRIES: "5"
+          NPM_CONFIG_FETCH_RETRY_FACTOR: "4"
+          NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: "10000"
+          NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: "60000"
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KARACHI_PULSE }}
