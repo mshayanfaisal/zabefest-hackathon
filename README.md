@@ -27,7 +27,7 @@ through a live console with smart prioritization, a heatmap, and analytics.
 | 3 | **Identification of target users** | [Target users](#target-users) |
 | 4 | **Technical architecture/design** | [Architecture diagram](#karachipulse) above + [Tech](#tech) |
 | 5 | **Sustainability or operational model** | [Sustainability / operational model](#sustainability--operational-model) |
-| 6 | **Demo/use-case scenario** | [Demo script (judges)](#demo-script-judges) |
+| 6 | **Demo/use-case scenario** | [Demo Scenario](#demo-script-judges) |
 | 7 | **Future scalability plan** | [Future scalability plan](#future-scalability-plan) |
 
 ## Components implemented (10 of 12 from the brief)
