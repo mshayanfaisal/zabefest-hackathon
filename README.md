@@ -18,6 +18,18 @@ through a live console with smart prioritization, a heatmap, and analytics.
 └─────────────────┘      └──────────────────────┘      └─────────────────────┘
 ```
 
+## Deliverables (hackathon brief)
+
+| # | Deliverable | Where it's covered |
+|---|---|---|
+| 1 | **A working prototype** | Two live apps — the [admin console](https://karachi-pulse.web.app) (deployed on Firebase Hosting) and the Expo citizen app. See [Quick start](#quick-start). |
+| 2 | **Problem validation and research** | [Problem validation & research](#problem-validation--research) |
+| 3 | **Identification of target users** | [Target users](#target-users) |
+| 4 | **Technical architecture/design** | [Architecture diagram](#karachipulse) above + [Tech](#tech) |
+| 5 | **Sustainability or operational model** | [Sustainability / operational model](#sustainability--operational-model) |
+| 6 | **Demo/use-case scenario** | [Demo script (judges)](#demo-script-judges) |
+| 7 | **Future scalability plan** | [Future scalability plan](#future-scalability-plan) |
+
 ## Components implemented (10 of 12 from the brief)
 
 1. **Citizen issue reporting** — category/sub-type, photo, GPS, anonymous option
@@ -65,6 +77,24 @@ Plus **data analytics / heatmap visualization** on the admin side.
 | Data authenticity | GPS-stamped reports, photo evidence, crowdsourced verification threshold |
 | Privacy & security | Row Level Security on every table; anonymous auth (no PII required); optional phone trust-boost |
 | Spam/fake prevention | Per-device rate limit (5/hr), 100 m/1 h geo-dedup, verification threshold, admin reject |
+
+## Problem validation & research
+- **The problem.** Karachi (~20M residents) generates a constant stream of civic
+  issues — potholes, uncollected garbage, broken streetlights, sewerage leaks,
+  water shortages, load shedding, and personal-safety incidents — but there is no
+  single, low-friction way for citizens to report them or track resolution.
+- **Why existing channels fall short.** Complaints are scattered across separate
+  agencies (KMC, KWSB, K-Electric, SSWMB, Police), each with its own phone line,
+  form, or helpline. There is little feedback to the citizen, no public record of
+  what was reported, and no shared priority signal for responders.
+- **What we heard / observed.** Citizens want reporting that is fast, anonymous,
+  and works on cheap Android phones with poor connectivity; authorities want a
+  de-duplicated, prioritized, verifiable queue instead of noisy duplicate calls.
+- **How KarachiPulse responds.** One app to report (with photo + GPS), automatic
+  severity scoring and geo-dedup so the queue stays clean, crowdsourced
+  verification for authenticity, a one-tap SOS for emergencies, and a public
+  transparency dashboard for accountability — mapping directly to the constraints
+  in the [table above](#mandatory-constraints--how-we-meet-them).
 
 ## Target users
 - **Citizens** of Karachi — fast, low-friction reporting (anonymous, offline, Urdu).
