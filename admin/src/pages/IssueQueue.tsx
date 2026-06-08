@@ -260,7 +260,6 @@ export default function IssueQueue() {
         <div style={{ display: "flex", gap: "8px", background: "#F3F4F6", padding: "4px", borderRadius: "8px" }}>
           <Select
             ariaLabel="District"
-            placeholder="All Districts"
             value={selDistrict}
             onChange={(v) => { setSelDistrict(v); setSelTown(""); setSelArea(""); }}
             options={[
@@ -271,7 +270,6 @@ export default function IssueQueue() {
           {selDistrict && (
             <Select
               ariaLabel="Town"
-              placeholder="All Towns"
               value={selTown}
               onChange={(v) => { setSelTown(v); setSelArea(""); }}
               options={[
@@ -283,7 +281,6 @@ export default function IssueQueue() {
           {selTown && (
             <Select
               ariaLabel="Area"
-              placeholder="All Areas"
               value={selArea}
               onChange={setSelArea}
               options={[
