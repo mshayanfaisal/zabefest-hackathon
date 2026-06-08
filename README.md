@@ -113,7 +113,7 @@ Plus **data analytics / heatmap visualization** on the admin side.
 - Severity model fine-tuned on resolved-report outcomes.
 - Read replicas + materialized heatmap tiles for very large datasets.
 
-## Demo script (judges)
+## Demo Scenario
 1. Citizen reports a pothole with photo — GPS auto-fills.
 2. Toggle airplane mode, submit again → "saved offline"; reconnect → auto-syncs.
 3. Switch to Urdu.
