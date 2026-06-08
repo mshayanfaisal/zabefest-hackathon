@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { STATUS_ORDER, CATEGORY_COLORS } from "../lib/supabase";
 import type { Report } from "../lib/supabase";
 import Select from "./Select";
@@ -13,11 +13,28 @@ export default function ReportDetailDrawer({
   onClose: () => void;
   onStatusChange: (id: string, status: string) => void;
 }) {
-  const [saved, setSaved] = useState(false);
+  const [localStatus, setLocalStatus] = useState(report.status);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleUpdate = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+  const isDirty = localStatus !== report.status;
+
+  useEffect(() => {
+    setLocalStatus(report.status);
+  }, [report.status]);
+
+  const handleUpdate = async () => {
+    if (!isDirty) return;
+    setIsSaving(true);
+    try {
+      await Promise.resolve(onStatusChange(report.id, localStatus));
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -79,17 +96,53 @@ export default function ReportDetailDrawer({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <DetailItem label="Full Name" value={report.user_name || "Not provided"} />
               <DetailItem label="Phone Number" value={report.user_phone || "Not provided"} />
-              <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", flexDirection: "column", gridColumn: "1 / -1" }}>
                 <span style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px", fontWeight: 600 }}>NIC Number</span>
                 <span style={{ fontSize: "14px", color: "#111827", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
                   {report.user_nic || "Not provided"} 
                   {report.user_nic && <span style={{ color: "#9CA3AF", display: "flex" }}><LockIcon size={14} /></span>}
                 </span>
               </div>
-              <DetailItem label="Neighborhood" value={report.area || "Not provided"} />
-              <div style={{ gridColumn: "1 / -1" }}>
-                <DetailItem label="Detailed Address" value={report.address || "Not provided"} />
-              </div>
+            </div>
+          </div>
+
+          {/* Incident Location Section */}
+          <div style={{ backgroundColor: "#F9FAFB", borderRadius: "12px", padding: "20px", border: "1px solid #E5E7EB" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                Incident Location
+              </h3>
+              <span style={{ backgroundColor: "#F3F4F6", color: "#4B5563", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 800 }}>
+                {report.area || "Unknown Area"}
+              </span>
+            </div>
+            
+            <p style={{ margin: "0 0 16px 0", fontSize: "15px", color: "#111827", fontWeight: 600, lineHeight: 1.5 }}>
+              {report.address || "No detailed address provided."}
+            </p>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "13px", color: "#9CA3AF", fontFamily: "monospace", fontWeight: 500 }}>
+                {report.lat ? `${report.lat.toFixed(5)}, ${report.lng?.toFixed(5)}` : "Coordinates unavailable"}
+              </span>
+              {(report.lat && report.lng) ? (
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${report.lat},${report.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ 
+                    backgroundColor: "#ffffff", color: "#374151", textDecoration: "none", 
+                    padding: "8px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: 600,
+                    display: "inline-flex", alignItems: "center", gap: "6px", border: "1px solid #D1D5DB",
+                    transition: "background 0.2s"
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F9FAFB")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#ffffff")}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+                  Open in Maps
+                </a>
+              ) : null}
             </div>
           </div>
 
@@ -113,8 +166,8 @@ export default function ReportDetailDrawer({
                 <Select
                   ariaLabel="Change status"
                   minWidth={180}
-                  value={report.status}
-                  onChange={(v) => { onStatusChange(report.id, v); setSaved(true); setTimeout(() => setSaved(false), 1500); }}
+                  value={localStatus}
+                  onChange={(v) => setLocalStatus(v)}
                   options={STATUS_ORDER.map((s) => ({ value: s, label: cap(s) }))}
                 />
               </div>
@@ -138,8 +191,22 @@ export default function ReportDetailDrawer({
           ) : (
             <div style={{ flex: 1 }} />
           )}
-          <button onClick={handleUpdate} style={{ flex: 2, backgroundColor: "#047857", color: "#ffffff", padding: "10px 16px", borderRadius: "8px", border: "none", fontWeight: 600, fontSize: "14px", cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", boxShadow: "0 2px 8px rgba(4, 120, 87, 0.2)", transition: "transform 0.1s" }}>
-            {saved ? <><CheckIcon size={16} /> Saved</> : "Update Status"}
+          <button 
+            onClick={handleUpdate} 
+            disabled={!isDirty || isSaving}
+            style={{ 
+              flex: 2, 
+              backgroundColor: isDirty ? "#047857" : "#F3F4F6", 
+              color: isDirty ? "#ffffff" : "#9CA3AF", 
+              padding: "10px 16px", borderRadius: "8px", border: "none", 
+              fontWeight: 600, fontSize: "14px", 
+              cursor: isDirty && !isSaving ? "pointer" : "not-allowed", 
+              display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", 
+              boxShadow: isDirty && !isSaving ? "0 2px 8px rgba(4, 120, 87, 0.2)" : "none", 
+              transition: "all 0.2s" 
+            }}
+          >
+            {isSaving ? "Saving..." : showSuccess ? <><CheckIcon size={16} /> Saved</> : isDirty ? "Save Changes" : "Update Status"}
           </button>
         </div>
 

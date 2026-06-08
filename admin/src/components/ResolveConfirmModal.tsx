@@ -34,7 +34,7 @@ export default function ResolveConfirmModal({ report, onConfirm, onCancel }: Pro
         animation: "fadeIn 0.15s ease",
       }} />
 
-      {/* Modal — same glass surface as the detail drawer */}
+      {/* Modal */}
       <div
         role="dialog" aria-modal="true" aria-labelledby="resolve-modal-title"
         onClick={(e) => e.stopPropagation()}
@@ -44,12 +44,10 @@ export default function ResolveConfirmModal({ report, onConfirm, onCancel }: Pro
           transform: "translate(-50%, -50%)",
           zIndex: 201,
           width: "min(480px, calc(100vw - 32px))",
-          background: "rgba(244,246,245,0.94)",
-          backdropFilter: "blur(22px) saturate(160%)",
-          WebkitBackdropFilter: "blur(22px) saturate(160%)",
-          borderRadius: "var(--radius)",
-          border: "1px solid rgba(255,255,255,0.6)",
-          boxShadow: "var(--shadow-lg)",
+          background: "#ffffff",
+          borderRadius: "16px",
+          border: "1px solid #E5E7EB",
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           animation: "modalPop 0.2s cubic-bezier(0.34,1.36,0.64,1)",
           overflow: "hidden",
         }}
@@ -58,8 +56,8 @@ export default function ResolveConfirmModal({ report, onConfirm, onCancel }: Pro
         <div style={{
           padding: "18px 20px 14px",
           display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-          borderBottom: "1px solid var(--border)",
-          background: "rgba(255,255,255,0.5)",
+          borderBottom: "1px solid #F3F4F6",
+          background: "#ffffff",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
@@ -91,14 +89,13 @@ export default function ResolveConfirmModal({ report, onConfirm, onCancel }: Pro
         </div>
 
         {/* ── Body ── */}
-        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12, background: "#ffffff" }}>
 
-          {/* Issue card — same visual style as IssueQueue cards */}
+          {/* Issue card */}
           <div style={{
-            background: "rgba(255,255,255,0.66)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
-            border: "1px solid rgba(255,255,255,0.5)", borderRadius: "var(--radius-sm)",
-            boxShadow: "var(--shadow)",
-            padding: "12px 14px", display: "flex", alignItems: "center", gap: 12,
+            background: "#F9FAFB",
+            border: "1px solid #E5E7EB", borderRadius: "12px",
+            padding: "12px 16px", display: "flex", alignItems: "center", gap: 12,
           }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
@@ -143,22 +140,22 @@ export default function ResolveConfirmModal({ report, onConfirm, onCancel }: Pro
             </span>
           </div>
 
-          {/* Warning callout — matches the app's warm-amber tone */}
+          {/* Warning callout */}
           <div style={{
-            background: "rgba(230,134,46,0.08)",
-            border: "1px solid rgba(230,134,46,0.3)",
-            borderRadius: "var(--radius-sm)",
-            padding: "12px 14px",
-            display: "flex", gap: 10, alignItems: "flex-start",
+            background: "#FFFBEB",
+            border: "1px solid #FDE68A",
+            borderRadius: "12px",
+            padding: "16px",
+            display: "flex", gap: 12, alignItems: "flex-start",
           }}>
             <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>⚠️</span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>
-                Permanent action — no undo
+                Permanent Action: No Undo
               </div>
               <div style={{ fontSize: 12, color: "#78350f", lineHeight: 1.55 }}>
                 Confirming marks this issue as <strong>fully verified, addressed, and permanently closed</strong>.
-                Once saved, no admin can reopen or edit it — enforced at the database level.
+                Once saved, it cannot be reopened or edited. This rule is enforced at the database level.
               </div>
             </div>
           </div>
@@ -166,10 +163,10 @@ export default function ResolveConfirmModal({ report, onConfirm, onCancel }: Pro
 
         {/* ── Footer ── */}
         <div style={{
-          padding: "12px 20px",
-          borderTop: "1px solid var(--border)",
-          display: "flex", gap: 10, justifyContent: "flex-end",
-          background: "rgba(255,255,255,0.4)",
+          padding: "16px 20px",
+          borderTop: "1px solid #F3F4F6",
+          display: "flex", gap: 12, justifyContent: "flex-end",
+          background: "#F9FAFB",
         }}>
           <button onClick={onCancel} className="btn btn-ghost" style={{ fontSize: 13, padding: "8px 18px" }}>
             Cancel

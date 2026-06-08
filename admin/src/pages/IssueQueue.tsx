@@ -9,13 +9,18 @@ import ResolveConfirmModal from "../components/ResolveConfirmModal";
 import Select from "../components/Select";
 import MultiSelect from "../components/MultiSelect";
 import { SearchIcon, ShieldIcon, DropletIcon, WrenchIcon, XIcon, UpvoteIcon, ClockIcon, ChevronDownIcon, LockIcon } from "../components/icons";
+import { KARACHI_EXHAUSTIVE_DATA } from "../lib/karachi_data";
 
 export default function IssueQueue() {
   const [reports, setReports] = useState<Report[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [severities, setSeverities] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [areas, setAreas] = useState<string[]>([]);
+  
+  // Cascading area filter state
+  const [selDistrict, setSelDistrict] = useState<string>("");
+  const [selTown, setSelTown] = useState<string>("");
+  const [selArea, setSelArea] = useState<string>("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -42,7 +47,16 @@ export default function IssueQueue() {
 
     if (statuses.length) query = query.in("status", statuses);
     if (categories.length) query = query.in("category", categories);
-    if (areas.length) query = query.in("area", areas);
+    
+    if (selArea) {
+      query = query.eq("area", selArea);
+    } else if (selTown) {
+      const t = KARACHI_EXHAUSTIVE_DATA.find(d => d.district === selDistrict)?.towns.find(t => t.name === selTown);
+      if (t) query = query.in("area", t.areas);
+    } else if (selDistrict) {
+      const d = KARACHI_EXHAUSTIVE_DATA.find(d => d.district === selDistrict);
+      if (d) query = query.in("area", d.towns.flatMap(t => t.areas));
+    }
 
     // Each selected severity bucket becomes one OR'd range condition, so
     // non-adjacent picks (e.g. Critical + Low) still work.
@@ -72,7 +86,7 @@ export default function IssueQueue() {
     const sorted = sortWithResolvedLast((data as Report[]) ?? []);
     setReports(sorted);
     setLoading(false);
-  }, [statuses, severities, categories, areas, search]);
+  }, [statuses, severities, categories, selDistrict, selTown, selArea, search]);
 
   useEffect(() => {
     fetchReports();
@@ -140,14 +154,16 @@ export default function IssueQueue() {
 
   const handleCancelResolve = () => setPendingResolve(null);
 
+  const activeReports = reports.filter(r => r.status !== "resolved");
+
   const counts = {
-    total: reports.length,
-    sos: reports.filter((r) => r.is_sos).length,
-    critical: reports.filter((r) => (r.severity_score ?? 0) >= 8).length,
-    pending: reports.filter((r) => r.status === "pending").length,
+    total: activeReports.length,
+    sos: activeReports.filter((r) => r.is_sos).length,
+    critical: activeReports.filter((r) => (r.severity_score ?? 0) >= 8).length,
+    pending: activeReports.filter((r) => r.status === "pending").length,
   };
 
-  const areaCounts = reports.reduce((acc, r) => {
+  const areaCounts = activeReports.reduce((acc, r) => {
     if (r.area) acc[r.area] = (acc[r.area] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -241,18 +257,45 @@ export default function IssueQueue() {
             { value: "utility", label: "Utilities" }
           ]}
         />
-        <MultiSelect
-          ariaLabel="Filter by area"
-          placeholder="All Areas"
-          noun="area"
-          nounPlural="areas"
-          values={areas}
-          onChange={setAreas}
-          options={KARACHI_AREAS.map(a => ({ value: a, label: a }))}
-        />
+        <div style={{ display: "flex", gap: "8px", background: "#F3F4F6", padding: "4px", borderRadius: "8px" }}>
+          <Select
+            ariaLabel="District"
+            placeholder="All Districts"
+            value={selDistrict}
+            onChange={(v) => { setSelDistrict(v); setSelTown(""); setSelArea(""); }}
+            options={[
+              { value: "", label: "All Districts" },
+              ...KARACHI_EXHAUSTIVE_DATA.map(d => ({ value: d.district, label: d.district }))
+            ]}
+          />
+          {selDistrict && (
+            <Select
+              ariaLabel="Town"
+              placeholder="All Towns"
+              value={selTown}
+              onChange={(v) => { setSelTown(v); setSelArea(""); }}
+              options={[
+                { value: "", label: "All Towns" },
+                ...(KARACHI_EXHAUSTIVE_DATA.find(d => d.district === selDistrict)?.towns.map(t => ({ value: t.name, label: t.name })) || [])
+              ]}
+            />
+          )}
+          {selTown && (
+            <Select
+              ariaLabel="Area"
+              placeholder="All Areas"
+              value={selArea}
+              onChange={setSelArea}
+              options={[
+                { value: "", label: "All Areas" },
+                ...(KARACHI_EXHAUSTIVE_DATA.find(d => d.district === selDistrict)?.towns.find(t => t.name === selTown)?.areas.map(a => ({ value: a, label: a })) || [])
+              ]}
+            />
+          )}
+        </div>
         
-        {(statuses.length > 0 || severities.length > 0 || categories.length > 0 || areas.length > 0 || search) && (
-          <button onClick={() => { setStatuses([]); setSeverities([]); setCategories([]); setAreas([]); setSearchInput(""); }}
+        {(statuses.length > 0 || severities.length > 0 || categories.length > 0 || selDistrict || search) && (
+          <button onClick={() => { setStatuses([]); setSeverities([]); setCategories([]); setSelDistrict(""); setSelTown(""); setSelArea(""); setSearchInput(""); }}
             style={{ background: "none", border: "none", color: "#EF4444", fontWeight: 700, fontSize: 13, cursor: "pointer", padding: "8px" }}
           >
             Clear Filters
@@ -434,15 +477,4 @@ function sortWithResolvedLast(reports: import("../lib/supabase").Report[]) {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   return [...active, ...resolved];
 }
-
-const KARACHI_AREAS = [
-  "Agra Taj Colony", "Azizabad", "Bahadurabad", "Baldia Town", "Banaras Colony", "Bath Island", "Bihar Colony", 
-  "Bin Qasim Town", "Boat Basin", "Buffer Zone", "Civil Lines", "Clifton", "DHA", "Dalmia", "Daryaabad", "Essa Nagri", 
-  "Federal B Area", "Gadap Town", "Garden", "Gulistan-e-Johar", "Gulshan-e-Hadeed", "Gulshan-e-Iqbal", "Gulzar-e-Hijri", 
-  "Hyderi", "Ibrahim Hyderi", "Kalri", "Karimabad", "Karsaz", "Khadda", "Kharadar", "Korangi", "Landhi", "Liaquatabad", 
-  "Lyari", "Malir", "Malir Cantt", "Malir Halt", "Manghopir", "Metroville", "Mithadar", "Model Colony", 
-  "Muhammad Ali Society", "Nazimabad", "North Nazimabad", "Nursery", "Orangi Town", "PECHS", "PIB Colony", "Pak Colony", 
-  "Pehlwan Goth", "Qasba Colony", "Quaidabad", "Rehri Goth", "SITE Area", "Saddar", "Safoora Goth", "Sakhi Hassan", 
-  "Scheme 33", "Shah Faisal Colony", "Shahrah-e-Faisal", "Shanti Nagar", "Steel Town", "Tariq Road", "Tipu Sultan"
-];
 

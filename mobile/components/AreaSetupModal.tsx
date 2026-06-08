@@ -4,20 +4,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { theme } from '../utils/theme';
 
-const NEIGHBORHOOD_DATA = [
-  { category: "South Karachi", areas: ["Clifton", "DHA", "Saddar", "Civil Lines", "Kharadar", "Mithadar", "Garden", "Boat Basin", "Bath Island"] },
-  { category: "Gulshan / East Karachi", areas: ["Gulshan-e-Iqbal", "Gulistan-e-Johar", "Scheme 33", "PIB Colony", "Gulzar-e-Hijri", "Safoora Goth", "Pehlwan Goth", "Dalmia", "Karsaz", "Shanti Nagar", "Essa Nagri"] },
-  { category: "PECHS / Central-East", areas: ["PECHS", "Bahadurabad", "Shahrah-e-Faisal", "Tipu Sultan", "Nursery", "Tariq Road", "Muhammad Ali Society"] },
-  { category: "Central Karachi", areas: ["Nazimabad", "North Nazimabad", "Federal B Area", "Liaquatabad", "Buffer Zone", "Hyderi", "Sakhi Hassan", "Karimabad", "Azizabad"] },
-  { category: "West Karachi", areas: ["Orangi Town", "Baldia Town", "SITE Area", "Qasba Colony", "Banaras Colony", "Pak Colony", "Metroville", "Manghopir"] },
-  { category: "Korangi District", areas: ["Korangi", "Landhi", "Shah Faisal Colony", "Model Colony", "Malir Halt", "Quaidabad"] },
-  { category: "Malir District", areas: ["Malir", "Malir Cantt", "Gadap Town", "Bin Qasim Town", "Ibrahim Hyderi", "Gulshan-e-Hadeed", "Steel Town", "Rehri Goth"] },
-  { category: "Lyari Region", areas: ["Lyari", "Kalri", "Agra Taj Colony", "Bihar Colony", "Khadda", "Daryaabad"] }
-];
+import { KARACHI_EXHAUSTIVE_DATA } from '../utils/karachi_data';
 
 export default function AreaSetupModal({ onComplete }: { onComplete: () => void }) {
   const [visible, setVisible] = useState(false);
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedTown, setSelectedTown] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [address, setAddress] = useState("");
   const [phase, setPhase] = useState<1 | 2>(1);
   const [userName, setUserName] = useState("");
@@ -102,23 +96,53 @@ export default function AreaSetupModal({ onComplete }: { onComplete: () => void 
               <Text style={styles.subtitle}>Select your primary neighborhood to help dispatch resources efficiently.</Text>
               
               <View style={styles.areaContainer}>
+                {/* Search Bar */}
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={`Search ${!selectedDistrict ? 'District' : !selectedTown ? 'Town' : 'Area'}...`}
+                  placeholderTextColor="#9CA3AF"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
                 <ScrollView style={styles.areaScroll} nestedScrollEnabled={true}>
-                  {NEIGHBORHOOD_DATA.map((group) => (
-                    <View key={group.category} style={styles.groupContainer}>
-                      <Text style={styles.groupHeader}>{group.category}</Text>
-                      {group.areas.map((area) => (
-                        <TouchableOpacity
-                          key={area}
-                          style={[styles.areaRow, selectedArea === area && styles.areaRowActive]}
-                          onPress={() => setSelectedArea(area)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.areaText, selectedArea === area && styles.areaTextActive]}>{area}</Text>
-                          {selectedArea === area && <Text style={styles.check}>✅</Text>}
+                  {!selectedDistrict ? (
+                    KARACHI_EXHAUSTIVE_DATA
+                      .filter(d => d.district.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .map((d) => (
+                      <TouchableOpacity key={d.district} style={styles.areaRow} onPress={() => { setSelectedDistrict(d.district); setSearchQuery(""); }} activeOpacity={0.7}>
+                        <Text style={styles.areaText}>{d.district}</Text>
+                        <Text style={styles.check}>→</Text>
+                      </TouchableOpacity>
+                    ))
+                  ) : !selectedTown ? (
+                    <>
+                      <TouchableOpacity style={styles.groupHeaderRow} onPress={() => { setSelectedDistrict(""); setSearchQuery(""); }} activeOpacity={0.7}>
+                        <Text style={styles.groupHeaderText}>← Back to Districts</Text>
+                      </TouchableOpacity>
+                      {KARACHI_EXHAUSTIVE_DATA.find(d => d.district === selectedDistrict)?.towns
+                        .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((t) => (
+                        <TouchableOpacity key={t.name} style={styles.areaRow} onPress={() => { setSelectedTown(t.name); setSearchQuery(""); }} activeOpacity={0.7}>
+                          <Text style={styles.areaText}>{t.name}</Text>
+                          <Text style={styles.check}>→</Text>
                         </TouchableOpacity>
                       ))}
-                    </View>
-                  ))}
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity style={styles.groupHeaderRow} onPress={() => { setSelectedTown(""); setSearchQuery(""); }} activeOpacity={0.7}>
+                        <Text style={styles.groupHeaderText}>← Back to {selectedDistrict}</Text>
+                      </TouchableOpacity>
+                      {KARACHI_EXHAUSTIVE_DATA.find(d => d.district === selectedDistrict)?.towns.find(t => t.name === selectedTown)?.areas
+                        .filter(a => a.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((a) => (
+                        <TouchableOpacity key={a} style={[styles.areaRow, selectedArea === a && styles.areaRowActive]} onPress={() => setSelectedArea(a)} activeOpacity={0.7}>
+                          <Text style={[styles.areaText, selectedArea === a && styles.areaTextActive]}>{a}</Text>
+                          {selectedArea === a && <Text style={styles.check}>✅</Text>}
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
                 </ScrollView>
               </View>
 
@@ -186,22 +210,23 @@ export default function AreaSetupModal({ onComplete }: { onComplete: () => void 
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  container: { width: '90%', maxHeight: '85%', backgroundColor: '#FAFAFA', padding: 24, borderRadius: 24, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 10 } },
-  title: { fontSize: 24, fontWeight: '800', color: theme.primary, marginBottom: 8, letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, color: theme.muted, marginBottom: 24, lineHeight: 20 },
-  label: { fontSize: 12, fontWeight: '700', color: theme.muted, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
-  areaContainer: { flexShrink: 1, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: theme.border, overflow: 'hidden', marginBottom: 20 },
+  container: { width: '90%', maxHeight: '85%', backgroundColor: '#FFFFFF', padding: 24, borderRadius: 24, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 5 },
+  title: { fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 8, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: '#6B7280', marginBottom: 20, lineHeight: 20 },
+  label: { fontSize: 12, fontWeight: '700', color: '#4B5563', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
+  areaContainer: { flexShrink: 1, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', overflow: 'hidden', marginBottom: 20 },
+  searchInput: { backgroundColor: '#F9FAFB', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, color: '#111827' },
   areaScroll: { flexGrow: 0 },
-  groupContainer: { marginBottom: 8 },
-  groupHeader: { backgroundColor: '#F3F4F6', paddingHorizontal: 16, paddingVertical: 8, fontSize: 13, fontWeight: '700', color: '#4B5563' },
-  areaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
+  groupHeaderRow: { backgroundColor: '#F9FAFB', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  groupHeaderText: { fontSize: 13, fontWeight: '700', color: '#4B5563' },
+  areaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   areaRowActive: { backgroundColor: '#F0FDF4' },
-  areaText: { fontSize: 14, color: theme.text },
-  areaTextActive: { fontWeight: '700', color: theme.primary },
-  check: { fontSize: 14 },
-  input: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: theme.border, padding: 14, fontSize: 15, color: theme.text, marginBottom: 16 },
-  btn: { backgroundColor: theme.primary, borderRadius: 14, height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
-  backBtn: { marginBottom: 12, alignSelf: 'flex-start' },
-  backText: { color: theme.muted, fontSize: 14, fontWeight: '700' }
+  areaText: { fontSize: 15, color: '#111827', fontWeight: '500' },
+  areaTextActive: { fontWeight: '700', color: '#166534' },
+  check: { fontSize: 15, color: '#9CA3AF' },
+  input: { backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', padding: 14, fontSize: 15, color: '#111827', marginBottom: 16 },
+  btn: { backgroundColor: '#111827', borderRadius: 14, height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
+  btnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+  backBtn: { marginBottom: 16, alignSelf: 'flex-start' },
+  backText: { color: '#6B7280', fontSize: 14, fontWeight: '700' }
 });

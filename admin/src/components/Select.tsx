@@ -111,7 +111,15 @@ export default function Select({
           role="listbox"
           className="select-menu"
           aria-label={ariaLabel}
-          style={{ position: "fixed", top: rect.bottom + 6, left: clampLeft(rect.left), minWidth: rect.width }}
+          style={{ 
+            position: "fixed", 
+            top: rect.bottom + 250 > window.innerHeight ? rect.top - 6 : rect.bottom + 6, 
+            transform: rect.bottom + 250 > window.innerHeight ? "translateY(-100%)" : "none",
+            left: clampLeft(rect.left), 
+            minWidth: rect.width,
+            maxHeight: "240px",
+            overflowY: "auto"
+          }}
         >
           {options.map((o, i) => {
             const selected = o.value === value;

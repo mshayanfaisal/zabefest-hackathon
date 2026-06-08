@@ -39,7 +39,7 @@ export default function VerifyButton({
       disabled={verified || busy}
     >
       <Text style={[styles.text, verified && styles.textVerified]}>
-        {verified ? `${t("verify.confirmed")} · ${count}` : `${t("verify.verify")} · ${count}`}
+        {verified ? `Acknowledged · ${count}` : `Acknowledge · ${count}`}
       </Text>
     </TouchableOpacity>
   );
