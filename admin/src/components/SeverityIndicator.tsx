@@ -18,7 +18,7 @@ export default function SeverityIndicator({
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
       <div
-        title={`AI severity: ${score ?? "pending"}/10`}
+        title={`Severity: ${score ?? "pending"}/10`}
         style={{
           width: 44, height: 44, borderRadius: 14, background: severityColor(score),
           color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
@@ -42,7 +42,7 @@ export function SeverityChip({ score }: { score: number | null }) {
   const isMedium = score != null && score >= 4 && score < 6; // yellow → needs dark text
   return (
     <span
-      title={`AI severity: ${score ?? "pending"}/10`}
+      title={`Severity: ${score ?? "pending"}/10`}
       style={{
         display: "inline-flex", alignItems: "center", flexShrink: 0,
         background: color, color: isMedium ? "#3d3000" : "#fff",

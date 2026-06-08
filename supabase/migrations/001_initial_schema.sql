@@ -121,7 +121,7 @@ create trigger reports_status_history
   for each row execute function log_status_change();
 
 -- Rule-based severity default + per-device rate limit + geo dedup.
--- Runs BEFORE INSERT. Gemini may overwrite severity_score asynchronously later.
+-- Runs BEFORE INSERT. An Edge Function may overwrite severity_score asynchronously later.
 create or replace function prepare_report()
 returns trigger as $$
 declare
@@ -139,7 +139,7 @@ begin
     end if;
   end if;
 
-  -- Rule-based severity fallback so the queue is never blank pre-AI.
+  -- Rule-based severity fallback so the queue is never blank.
   if new.severity_score is null then
     new.severity_score := case
       when new.is_sos then 10

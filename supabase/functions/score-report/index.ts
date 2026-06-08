@@ -1,5 +1,5 @@
 // Supabase Edge Function: score-report
-// AI severity scoring for civic reports via the Gemini API (free tier).
+// Severity scoring for civic reports (free tier).
 // Deploy:  supabase functions deploy score-report
 // Secrets: supabase secrets set GEMINI_KEY=...   (SUPABASE_URL / SERVICE_ROLE auto-injected)
 //
@@ -59,7 +59,7 @@ Respond with exactly this JSON shape:
 
     if (!res.ok) {
       const errText = await res.text();
-      return Response.json({ error: `gemini ${res.status}: ${errText}` }, { status: 502, headers: corsHeaders });
+      return Response.json({ error: `scoring ${res.status}: ${errText}` }, { status: 502, headers: corsHeaders });
     }
 
     const data = await res.json();

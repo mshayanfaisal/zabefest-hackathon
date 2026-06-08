@@ -6,7 +6,7 @@
 KarachiPulse lets citizens report urban problems (potholes, garbage, broken
 streetlights, sewerage leaks, unsafe zones, water shortages, load shedding) and
 send emergency SOS alerts — while authorities triage, assign, and resolve them
-through a live console with AI prioritization, a heatmap, and analytics.
+through a live console with smart prioritization, a heatmap, and analytics.
 
 ```
 ┌─────────────────┐      ┌──────────────────────┐      ┌─────────────────────┐
@@ -14,7 +14,7 @@ through a live console with AI prioritization, a heatmap, and analytics.
 │  (Expo / RN)    │─────▶│  Postgres + PostGIS   │◀────▶│   (React + Vite)    │
 │  report · SOS   │      │  Auth · Storage       │      │  queue · heatmap    │
 │  verify · map   │      │  Realtime · EdgeFn    │      │  analytics · SOS    │
-│  offline · i18n │      │  Gemini scoring       │      │  public dashboard   │
+│  offline · i18n │      │  severity scoring     │      │  public dashboard   │
 └─────────────────┘      └──────────────────────┘      └─────────────────────┘
 ```
 
@@ -22,7 +22,7 @@ through a live console with AI prioritization, a heatmap, and analytics.
 
 1. **Citizen issue reporting** — category/sub-type, photo, GPS, anonymous option
 2. **Geo-tagging / location intelligence** — auto GPS, PostGIS dedup, map views
-3. **Smart prioritization** — Gemini AI severity scoring (1–10) + rule-based fallback
+3. **Smart prioritization** — automated severity scoring (1–10) + rule-based fallback
 4. **Real-time notifications/alerts** — Supabase Realtime to admin queue + SOS panel
 5. **Public transparency dashboard** — read-only, no login
 6. **Crowdsourced verification** — community confirms; auto-verify at 3 confirmations
@@ -36,7 +36,7 @@ Plus **data analytics / heatmap visualization** on the admin side.
 ## Repo layout
 - [`mobile/`](mobile/) — Expo React Native citizen app
 - [`admin/`](admin/) — React + Vite authority console
-- [`supabase/`](supabase/) — schema, RLS, seed, and the AI scoring Edge Function
+- [`supabase/`](supabase/) — schema, RLS, seed, and the severity scoring Edge Function
 
 ## Quick start
 
@@ -60,7 +60,7 @@ Plus **data analytics / heatmap visualization** on the admin side.
 | Constraint | Approach |
 |---|---|
 | Low-end Android | Expo Go compatible; map via lightweight Leaflet WebView (no native maps build); compressed photos (quality 0.5) |
-| Poor/unstable internet | Offline queue + auto-sync; async AI scoring never blocks the UI |
+| Poor/unstable internet | Offline queue + auto-sync; async severity scoring never blocks the UI |
 | Scalability | Supabase (managed Postgres) + auto-scaling Edge Functions; indexed queries |
 | Data authenticity | GPS-stamped reports, photo evidence, crowdsourced verification threshold |
 | Privacy & security | Row Level Security on every table; anonymous auth (no PII required); optional phone trust-boost |
@@ -73,7 +73,7 @@ Plus **data analytics / heatmap visualization** on the admin side.
 - **The public & press** — the transparency dashboard for accountability.
 
 ## Sustainability / operational model
-- **Phase 1 (prototype):** single city, free-tier Supabase + Gemini Flash, manual assignment.
+- **Phase 1 (prototype):** single city, free-tier Supabase, manual assignment.
 - **Phase 2 (pilot):** KMC partnership; route reports to departmental email/WhatsApp; ward-level routing; government grant funding.
 - **Phase 3 (scale):** multi-city (Lahore, Islamabad); municipal SaaS subscription; anonymized civic-data API licensed to urban-planning researchers.
 
@@ -88,11 +88,11 @@ Plus **data analytics / heatmap visualization** on the admin side.
 2. Toggle airplane mode, submit again → "saved offline"; reconnect → auto-syncs.
 3. Switch to Urdu.
 4. Tap SOS → appears instantly on the admin SOS panel with a sound + map link.
-5. Admin queue is sorted by SOS → AI severity; show Gemini's reason on a card.
+5. Admin queue is sorted by SOS → severity; show the scoring reason on a card.
 6. Change a status (verified → in progress) — persisted + audit-logged.
 7. Open heatmap (density across Karachi) and analytics (category/status charts).
 8. Open the public dashboard — works with no login.
 
 ## Tech
 React Native (Expo SDK 56) · React 19 + Vite · Supabase (Postgres + PostGIS, Auth,
-Storage, Realtime, Edge Functions / Deno) · Google Gemini · Leaflet · Recharts.
+Storage, Realtime, Edge Functions / Deno) · Leaflet · Recharts.

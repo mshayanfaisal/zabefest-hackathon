@@ -1,7 +1,7 @@
 # KarachiPulse — Backend (Supabase)
 
 Hosted Supabase project: Postgres + PostGIS, Auth (anonymous + email/password),
-Storage, Realtime, and one Edge Function for AI severity scoring.
+Storage, Realtime, and one Edge Function for severity scoring.
 
 ## One-time setup
 
@@ -31,9 +31,9 @@ Storage, Realtime, and one Edge Function for AI severity scoring.
    values ('<that-user-uuid>', 'Demo Admin', 'KMC', 'superadmin');
    ```
 
-## Edge Function — AI severity scoring (Gemini)
+## Edge Function — severity scoring
 
-Requires the Supabase CLI (`supabase` is installed) and a Gemini API key
+Requires the Supabase CLI (`supabase` is installed) and a scoring API key
 (https://aistudio.google.com/apikey).
 
 ```bash

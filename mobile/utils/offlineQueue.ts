@@ -59,7 +59,7 @@ export const flushQueue = async (): Promise<number> => {
       failed.push(report);
     } else {
       flushed += 1;
-      // Fire-and-forget AI scoring for synced reports.
+      // Fire-and-forget severity scoring for synced reports.
       supabase.functions
         .invoke("score-report", {
           body: {
